@@ -78,6 +78,68 @@ Create a reliable Go HTTP server foundation with explicit startup, runtime error
 - Approved during planning before being added to GitHub.
 - The issue should be added to GitHub only after the complete local issue backlog has been reviewed.
 
+## ISSUE-000B: Establish Local And Pull Request CI Checks
+
+- Type: Foundation/tooling
+- Related user story: None; prerequisite for all implementation issues
+- Prerequisite: None
+- Status: Complete
+- GitHub status: Not added
+
+### Goal
+
+Establish one simple local command for project checks and run that same command in GitHub Actions for every pull request.
+
+### Scope
+
+- Add a root `Makefile`.
+- Add a `test` target that runs `go test ./...`.
+- Add a `vet` target that runs `go vet ./...`.
+- Add a `fmt-check` target that fails when Go files are not formatted.
+- Add a `check` target that runs the formatting check, vet, and tests.
+- Add a GitHub Actions workflow under `.github/workflows`.
+- Run the workflow for pull requests.
+- Use the Go version declared in `go.mod`.
+- Have CI invoke `make check` rather than duplicating the individual commands.
+
+### Acceptance Criteria
+
+- A developer can run `make test` to execute all Go tests.
+- A developer can run `make vet` to run Go's static analysis.
+- A developer can run `make fmt-check` to detect unformatted Go files.
+- A developer can run `make check` to run the complete initial local check suite.
+- The formatting check behaves correctly while the repository has no Go source files.
+- Pull requests trigger the CI workflow.
+- CI checks out the repository and uses the Go version declared in `go.mod`.
+- CI runs `make check`.
+- CI requires no secrets, database service, or external application service.
+- Local checks and pull-request checks use the same Makefile command.
+
+### Out Of Scope
+
+- Application code or recipe behavior.
+- End-to-end test harness implementation.
+- Database services or migrations.
+- Third-party linters.
+- Coverage reporting.
+- Race detection.
+- Docker or deployment workflows.
+- Push, release, or scheduled workflows.
+
+### Implementation Notes
+
+- Use `actions/checkout` and `actions/setup-go` in the initial workflow.
+- Configure Go through `go-version-file: go.mod`.
+- Use read-only repository permissions.
+- Keep the initial workflow to one check job.
+- Keep Makefile targets small so later issues can add focused test targets without changing the CI contract.
+
+### Review Notes
+
+- Approved during planning as the foundation for implementation work.
+- This issue should be completed before `ISSUE-000`.
+- The issue should be added to GitHub only after the complete local issue backlog has been reviewed.
+
 ## ISSUE-001: Display The Recipe Catalog
 
 - Type: Vertical slice

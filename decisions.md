@@ -167,3 +167,11 @@ This document records product and architecture decisions for Hone In. Decisions 
 - Decision: Develop each vertical slice test-first. Begin with a small end-to-end test suite that expresses the user-visible behavior, then implement the slice against those tests. Add unit tests for isolated domain or transformation logic and integration tests for database, repository, HTTP, or other boundary behavior when they provide focused coverage.
 - Rationale: End-to-end tests keep each slice aligned with its user outcome, while unit and integration tests provide fast, precise feedback for logic and system boundaries.
 - Consequences: Test changes are created before implementation changes for each slice. A slice is not complete until its end-to-end behavior and relevant lower-level tests pass. Tests remain isolated, deterministic, and limited to the behavior in the approved issue rather than becoming a speculative test framework.
+
+## D-021: Expand CI With Project Capabilities
+
+- Status: Accepted
+- Date: 2026-08-16
+- Decision: Keep the initial pull-request CI pipeline intentionally small and expand it as the repository gains application code, features, test levels, dependencies, runtime services, and quality requirements.
+- Rationale: A minimal pipeline is appropriate for the empty initial repository, while evolving CI with the application keeps checks relevant without adding speculative infrastructure.
+- Consequences: New capabilities should add or update the corresponding Makefile targets and CI steps in the same local/CI contract. Future database, integration, end-to-end, race, coverage, linting, or build checks should be introduced when their related implementation exists and should remain runnable locally where practical.
