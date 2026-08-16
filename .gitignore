@@ -32,3 +32,5 @@ go.work.sum
 # .vscode/
 SKILL.md
 
+# Keep project-local OpenCode skills versioned.
+!/.opencode/skills/**/SKILL.md
