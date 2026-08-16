@@ -16,6 +16,7 @@ This skill defines the implementation workflow for the Hone In repository. Follo
 - Never edit the issue root after it is created unless the user explicitly permits it.
 - Never edit a parent or ancestor of the issue root unless the user explicitly permits it.
 - Keep every implementation edit limited to exactly one file. If a coherent change requires multiple files, split it into multiple child edits.
+- Follow test-driven development for every vertical slice: write the small test suite first, observe the expected failure, then implement the behavior.
 - Do not make unrelated cleanup, refactoring, formatting, dependency, or documentation changes in an issue child edit.
 
 ## Jujutsu Model
@@ -46,6 +47,27 @@ The child edit may change one file only. Its description must explain the change
 
 The description can be a multi-line Jujutsu description when useful. The change identifier should remain concise, while the body should make the rationale and boundaries clear.
 
+## Test-Driven Slice Workflow
+
+Every vertical slice follows a red-green-refactor sequence:
+
+1. Translate the approved issue acceptance criteria into a small end-to-end test suite.
+2. Create the test child edit before any implementation child edit for that behavior.
+3. Run the tests and confirm they fail because the behavior is not implemented, not because the test harness is broken.
+4. Add focused unit tests for pure domain, validation, parsing, search, scaling, or transformation logic when that logic benefits from isolated coverage.
+5. Add focused integration tests for database, migration, repository, HTTP, or other boundary behavior when unit or end-to-end tests alone would not provide useful diagnosis.
+6. Implement the smallest behavior that makes the tests pass.
+7. Run the relevant focused tests, then the complete test suite for the repository.
+8. Refactor only while the tests remain green and the change stays within the approved issue.
+
+End-to-end tests are the primary acceptance signal for each vertical slice. They should exercise the user-visible flow through the application's real HTTP boundary and an isolated test data store or equivalent test environment. Use the simplest reliable test harness; do not build a speculative testing framework.
+
+Unit and integration tests complement, rather than replace, end-to-end coverage. Do not duplicate every assertion at every level. Put user outcomes in end-to-end tests, detailed edge cases in unit tests, and wiring or persistence behavior in integration tests.
+
+Test child edits are subject to the same one-file and review rules as implementation edits. If a test helper or fixture needs its own file, create another child edit for that file. Never hide implementation changes inside a test child edit.
+
+If a required test cannot be written or fails for a reason unrelated to the approved behavior, stop and ask the user rather than weakening the test or proceeding without coverage.
+
 ## Issue Lifecycle
 
 ### 1. Establish Context
@@ -58,6 +80,7 @@ Before creating an issue root:
 4. Inspect the existing implementation and tests.
 5. Run `jj status` and `jj log` to confirm the current history.
 6. Check issue dependencies and confirm that the user wants to start this issue.
+7. Identify the first end-to-end behavior and the smallest test suite that will express it.
 
 If there are unrelated working-copy changes, an existing issue root, pending unapproved child edits, or unclear requirements, stop and ask the user before creating or modifying anything.
 
@@ -122,7 +145,8 @@ If any condition is missing, remain on the current issue and ask the user what t
 - Preserve the decisions in `decisions.md`; if implementation exposes a conflict, stop and ask rather than silently changing the decision.
 - Prefer the existing project structure and patterns.
 - Keep server-rendered HTML and HTMX behavior aligned with the approved stories.
-- Add tests as separate one-file child edits when behavior needs coverage.
+- Start each slice with end-to-end tests and add unit or integration tests where they provide focused coverage.
+- Keep tests as separate one-file child edits from implementation changes.
 - Treat generated files as ordinary files for scope and review; generated changes must still be isolated to one child edit.
 - Do not add compatibility layers, abstractions, or future features without an approved issue or explicit user approval.
 
