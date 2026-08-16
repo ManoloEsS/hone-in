@@ -15,7 +15,7 @@ This document is the local issue backlog for Hone In. Issues are drafted and rev
 
 - Type: Foundation
 - Related user story: None; prerequisite for `US-001`
-- Status: Approved
+- Status: Complete
 - GitHub status: Not added
 
 ### Goal

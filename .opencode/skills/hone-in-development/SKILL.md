@@ -1,6 +1,6 @@
 ---
 name: hone-in-development
-description: Use for Hone In implementation work when changes must follow the approved issue backlog, Jujutsu issue roots, single-file child edits, explicit review, and user-controlled squashing.
+description: Use for Hone In implementation work when changes must follow the approved issue backlog, Jujutsu issue roots, single-file child edits, continuous within-issue review, and user-controlled squashing.
 ---
 
 # Hone In Development Workflow
@@ -11,7 +11,8 @@ This skill defines the implementation workflow for the Hone In repository. Follo
 
 - Work on one approved issue at a time.
 - Do not implement an issue whose status is not `Approved` or `In progress` in `issues.md`.
-- Do not move to a later issue until the current issue's child edits have all been explicitly approved and the user has squashed them into the current issue root.
+- Do not move to a later issue until the current issue's child edits are complete, the user has reviewed the issue's work, and the user has squashed them into the current issue root.
+- Require explicit user confirmation before creating a new issue root. No confirmation is required between child edits within the current issue.
 - The user controls Jujutsu squashing. Never run `jj squash`, `jj abandon`, rebase operations, or equivalent history-rewriting commands unless the user explicitly asks for that operation.
 - Never edit the issue root after it is created unless the user explicitly permits it.
 - Never edit a parent or ancestor of the issue root unless the user explicitly permits it.
@@ -82,7 +83,7 @@ Before creating an issue root:
 6. Check issue dependencies and confirm that the user wants to start this issue.
 7. Identify the first end-to-end behavior and the smallest test suite that will express it.
 
-If there are unrelated working-copy changes, an existing issue root, pending unapproved child edits, or unclear requirements, stop and ask the user before creating or modifying anything.
+If there are unrelated working-copy changes, an existing issue root for a different issue, unresolved child-edit changes, or unclear requirements, stop and ask the user before creating or modifying anything.
 
 ### 2. Create the Issue Root
 
@@ -115,27 +116,33 @@ Create a new child edit on top of the current edit, then make the file change. U
 
 If a command changes more than the intended file, stop and cleanly separate the work into child edits rather than accepting a multi-file child.
 
-### 5. Wait for Review
+### 5. Continue Within The Issue
 
-After every child edit, stop and wait for the user's explicit review. Do not create the next child edit after the user rejects or requests changes until the current child has been addressed.
+After every child edit:
 
-All child edits for the issue must be reviewed and explicitly approved. Approval of one child does not approve the issue root or authorize moving to another issue.
+- Report the file, detailed change, issue linkage, decisions, validation, and any residual risk.
+- Leave the child edit available for the user to inspect and discuss.
+- Continue to the next planned child edit within the same issue without waiting for explicit approval.
+- Pause if the user asks to stop, requests a change, identifies a conflict, or the implementation exposes an unresolved requirement.
 
-### 6. User Squashes the Issue
+The user may review and discuss each child edit independently. Discussion does not authorize changing the issue root or moving to another issue.
 
-After all child edits for the issue are approved, tell the user that the issue is ready to squash. Do not squash the edits yourself. Do not edit the root to imitate a squash. Wait for the user to confirm that the approved child edits have been squashed into the issue root.
+### 6. Complete The Current Issue
 
-Only after that confirmation may the issue be considered complete for workflow purposes. Any status update in `issues.md`, `user_stories.md`, or another documentation file must itself be a separately described, single-file child edit unless the user explicitly directs otherwise.
+After all child edits for the issue are complete and the issue has been verified against its acceptance criteria, tell the user that the issue is ready to review and squash. Do not squash the edits yourself. Do not edit the root to imitate a squash. Wait for the user to confirm that the child edits have been squashed into the issue root.
+
+Only after that confirmation may the issue be considered complete for workflow purposes or may work begin on a new issue. Any status update in `issues.md`, `user_stories.md`, or another documentation file must itself be a separately described, single-file child edit unless the user explicitly directs otherwise.
 
 ### 7. Move to the Next Issue
 
 Before starting another issue:
 
-- Confirm the prior issue's child edits were approved.
+- Confirm the prior issue's child edits were reviewed and all requested changes are resolved.
 - Confirm the user squashed them into the issue root.
 - Confirm the issue root remains the final issue change.
 - Confirm the issue is verified against its acceptance criteria.
 - Confirm the next issue is approved and its dependencies are satisfied.
+- Obtain explicit user confirmation before creating the next issue root.
 
 If any condition is missing, remain on the current issue and ask the user what to do.
 
