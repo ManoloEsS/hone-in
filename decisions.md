@@ -159,3 +159,11 @@ This document records product and architecture decisions for Hone In. Decisions 
 - Decision: Enable SQLite foreign-key enforcement and define ingredient and preparation-step foreign keys with `ON DELETE CASCADE`.
 - Rationale: Deleting a recipe should reliably remove its dependent content without orphaned records.
 - Consequences: The SQLite connection must enable foreign keys, and child-table migrations must define the cascade behavior.
+
+## D-020: Use TDD For Vertical Slices
+
+- Status: Accepted
+- Date: 2026-08-16
+- Decision: Develop each vertical slice test-first. Begin with a small end-to-end test suite that expresses the user-visible behavior, then implement the slice against those tests. Add unit tests for isolated domain or transformation logic and integration tests for database, repository, HTTP, or other boundary behavior when they provide focused coverage.
+- Rationale: End-to-end tests keep each slice aligned with its user outcome, while unit and integration tests provide fast, precise feedback for logic and system boundaries.
+- Consequences: Test changes are created before implementation changes for each slice. A slice is not complete until its end-to-end behavior and relevant lower-level tests pass. Tests remain isolated, deterministic, and limited to the behavior in the approved issue rather than becoming a speculative test framework.
