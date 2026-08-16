@@ -32,7 +32,7 @@ This document records product and architecture decisions for Hone In. Decisions 
 - Date: 2026-08-15
 - Decision: Use SQLite as the application's embedded database.
 - Rationale: The application is initially single-user and local, so a separate database server is unnecessary.
-- Consequences: The application will use a local SQLite database file and database migrations. The SQLite driver choice remains an implementation detail to confirm before coding.
+- Consequences: The application will use a local SQLite database file and database migrations. The SQLite driver is selected in D-014.
 
 ## D-005: Start As A Single-User Application
 
@@ -64,7 +64,7 @@ This document records product and architecture decisions for Hone In. Decisions 
 - Date: 2026-08-15
 - Decision: Ingredient quantities are required and numeric in the initial version.
 - Rationale: Numeric values allow the first scaling implementation to remain predictable and simple.
-- Consequences: Edge cases such as quantities described as "to taste," ranges, or non-numeric values are deferred. The behavior of ingredient units remains to be defined separately.
+- Consequences: Edge cases such as quantities described as "to taste," ranges, or non-numeric values are deferred. Ingredient units are optional free-form text.
 
 ## D-009: Scale With Integer Multipliers
 
@@ -78,15 +78,15 @@ This document records product and architecture decisions for Hone In. Decisions 
   ```
 
 - Rationale: Integer multiplication provides useful scaling without requiring yield or serving modeling.
-- Consequences: Yield-based scaling, fractional multipliers, unit conversion, and quantity formatting rules are deferred.
+- Consequences: Any positive integer is valid initially. Yield-based scaling, fractional multipliers, unit conversion, and quantity formatting rules are deferred.
 
 ## D-010: Search Recipe Names By Independent Words
 
 - Status: Accepted
 - Date: 2026-08-15
-- Decision: Search terms match independently against words in the recipe name. A multi-word query should require each word to match.
+- Decision: Search terms match independently against complete words in the recipe name. A multi-word query should require each word to match, regardless of term order.
 - Rationale: Chefs should be able to find a recipe without entering the exact phrase or word order.
-- Consequences: Search initially covers recipe names only. Recipe descriptions and other fields may be added later. Exact tokenization, punctuation handling, ranking, and partial-word behavior will be defined when the search story is discussed.
+- Consequences: Search initially covers recipe names only. A partial term must not match a larger word, such as `cake` matching `cupcake`. Punctuation separates words, and accents are ignored during matching. Recipe descriptions and other fields may be added later.
 
 ## D-011: Review Work Before Implementation
 
@@ -96,10 +96,66 @@ This document records product and architecture decisions for Hone In. Decisions 
 - Rationale: The application is being designed incrementally through vertical slices.
 - Consequences: No implementation should be started solely from an unreviewed plan. GitHub issues should be drafted and reviewed before work begins on them.
 
-## Open Questions
+## D-012: Use Goose For Database Migrations
 
-- Should an ingredient unit be optional or required?
-- What is the minimum content required to save a recipe?
-- Should a recipe be allowed to have no ingredients or no preparation steps?
-- What range of integer multipliers should the initial interface offer?
-- How should search handle punctuation, accents, and partial words?
+- Status: Accepted
+- Date: 2026-08-16
+- Decision: Use Goose to manage versioned SQLite database migrations.
+- Rationale: Goose provides a clear migration history and a repeatable way to initialize and evolve the embedded database.
+- Consequences: Migration files will be stored in the repository and applied by the application during startup or through an explicit development command. Migration ownership will remain separate from generated query code.
+
+## D-013: Use Sqlc For Type-Safe Database Access
+
+- Status: Accepted
+- Date: 2026-08-16
+- Decision: Use sqlc to generate type-safe Go database-access code from SQL queries.
+- Rationale: SQL remains explicit while generated types reduce manual row mapping and query boilerplate.
+- Consequences: SQL query files and sqlc configuration become part of the repository. Generated code will be treated as a build artifact and regenerated when queries or schema change.
+
+## D-014: Use Modernc Sqlite
+
+- Status: Accepted
+- Date: 2026-08-16
+- Decision: Use `modernc.org/sqlite` as the SQLite driver.
+- Rationale: It is a pure-Go driver that avoids a CGO dependency and keeps local and production builds simple.
+- Consequences: SQLite access will use the `database/sql` interfaces supported by the driver.
+
+## D-015: Filter Recipe Search In Go Initially
+
+- Status: Accepted
+- Date: 2026-08-16
+- Decision: Initially load recipe names through sqlc and filter search results in Go memory instead of adding SQLite FTS5.
+- Rationale: The application is single-user and the initial catalog is expected to be small. This avoids specialized SQLite search schema and keeps the first implementation simple.
+- Consequences: Search will not require an FTS5 table or search index migrations. A database-backed search strategy can replace the in-memory filter later without changing the search behavior or UI contract.
+
+## D-016: Allow Incomplete Recipe Content Initially
+
+- Status: Accepted
+- Date: 2026-08-16
+- Decision: A recipe requires a name, but ingredients and preparation steps are optional.
+- Rationale: The application is being built incrementally, and a recipe record can be created before its content is added.
+- Consequences: A recipe may temporarily have no ingredients or no preparation steps. No minimum content rule will be enforced initially.
+
+## D-017: Update Recipe Timestamps For Content Changes
+
+- Status: Accepted
+- Date: 2026-08-16
+- Decision: Update a recipe's `updated_at` timestamp whenever its name, ingredients, or preparation steps change.
+- Rationale: The timestamp should represent the latest change to the complete recipe, not only changes to the recipe row itself.
+- Consequences: Ingredient and preparation-step create, edit, delete, and reorder operations must update the parent recipe timestamp in the same transaction.
+
+## D-018: Use Server-Rendered Destructive Confirmations
+
+- Status: Accepted
+- Date: 2026-08-16
+- Decision: Destructive operations must use a server-rendered confirmation step rather than relying only on browser JavaScript confirmation dialogs.
+- Rationale: Forms must remain safe and usable when JavaScript is unavailable.
+- Consequences: Ingredient removal, preparation-step removal, and recipe deletion require a confirmation page or equivalent server-rendered confirmation flow before the final POST.
+
+## D-019: Enforce SQLite Cascading Deletes
+
+- Status: Accepted
+- Date: 2026-08-16
+- Decision: Enable SQLite foreign-key enforcement and define ingredient and preparation-step foreign keys with `ON DELETE CASCADE`.
+- Rationale: Deleting a recipe should reliably remove its dependent content without orphaned records.
+- Consequences: The SQLite connection must enable foreign keys, and child-table migrations must define the cascade behavior.
