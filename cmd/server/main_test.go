@@ -28,7 +28,7 @@ func TestHealthEndpointReturnsOK(t *testing.T) {
 func TestNewServerConfiguresHTTPServer(t *testing.T) {
 	const address = "127.0.0.1:8080"
 
-	server := newServer(address)
+	server := newServer(address, newHandler())
 
 	if server.Addr != address {
 		t.Fatalf("expected server address %q, got %q", address, server.Addr)
@@ -56,7 +56,7 @@ func TestServeShutsDownWhenContextIsCanceled(t *testing.T) {
 		t.Fatalf("listen for test server: %v", err)
 	}
 
-	server := newServer(listener.Addr().String())
+	server := newServer(listener.Addr().String(), newHandler())
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -99,14 +99,14 @@ func waitForHealth(t *testing.T, url string) {
 func TestServeReturnsUnexpectedError(t *testing.T) {
 	wantErr := errors.New("listener failed")
 
-	err := serve(context.Background(), newServer(""), errorListener{err: wantErr}, time.Second)
+	err := serve(context.Background(), newServer("", newHandler()), errorListener{err: wantErr}, time.Second)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected serve error %v, got %v", wantErr, err)
 	}
 }
 
 func TestServeIgnoresServerClosed(t *testing.T) {
-	err := serve(context.Background(), newServer(""), errorListener{err: http.ErrServerClosed}, time.Second)
+	err := serve(context.Background(), newServer("", newHandler()), errorListener{err: http.ErrServerClosed}, time.Second)
 	if err != nil {
 		t.Fatalf("expected normal server closure to return nil, got %v", err)
 	}
@@ -134,7 +134,7 @@ func TestServerAddress(t *testing.T) {
 func TestRunWithContextReturnsListenError(t *testing.T) {
 	wantErr := errors.New("listen failed")
 
-	err := runWithContext(context.Background(), ":0", func(_, _ string) (net.Listener, error) {
+	err := runWithContext(context.Background(), ":0", newHandler(), func(_, _ string) (net.Listener, error) {
 		return nil, wantErr
 	})
 	if !errors.Is(err, wantErr) {
@@ -150,7 +150,7 @@ func TestServeReturnsShutdownTimeout(t *testing.T) {
 
 	requestStarted := make(chan struct{})
 	requestRelease := make(chan struct{})
-	server := newServer(listener.Addr().String())
+	server := newServer(listener.Addr().String(), newHandler())
 	server.Handler = http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
 		close(requestStarted)
 		<-requestRelease

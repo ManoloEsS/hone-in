@@ -1,6 +1,6 @@
 ---
 name: hone-in-development
-description: Use for Hone In implementation work when changes must follow the approved issue backlog, Jujutsu issue roots, single-file child edits, continuous within-issue review, and user-controlled squashing.
+description: Use for Hone In implementation work when changes must follow the approved issue backlog, Jujutsu issue roots, complete runnable child edits, continuous within-issue review, and user-controlled squashing.
 ---
 
 # Hone In Development Workflow
@@ -16,8 +16,9 @@ This skill defines the implementation workflow for the Hone In repository. Follo
 - The user controls Jujutsu squashing. Never run `jj squash`, `jj abandon`, rebase operations, or equivalent history-rewriting commands unless the user explicitly asks for that operation.
 - Never edit the issue root after it is created unless the user explicitly permits it.
 - Never edit a parent or ancestor of the issue root unless the user explicitly permits it.
-- Keep every implementation edit limited to exactly one file. If a coherent change requires multiple files, split it into multiple child edits.
-- Follow test-driven development for every vertical slice: write the small test suite first, observe the expected failure, then implement the behavior.
+- Keep every implementation edit limited to one file by default. Allow multiple files in one child when they are required together for one coherent, complete, runnable behavior, such as implementation and its tests.
+- Follow test-driven development for every vertical slice: define the tests first, then complete the smallest child that makes the relevant tests pass.
+- Never complete or report a code child that does not compile, has failing relevant tests, or leaves unfinished or unrunnable functionality.
 - Do not make unrelated cleanup, refactoring, formatting, dependency, or documentation changes in an issue child edit.
 
 ## Jujutsu Model
@@ -38,9 +39,9 @@ Each functional change is a new child edit on top of the current edit:
 jj new -m "ISSUE-000: Add the server entry point"
 ```
 
-The child edit may change one file only. Its description must explain the change in enough detail for review:
+The child edit should change one file when possible. It may change multiple files when those files are necessary to deliver one complete, runnable behavior. Its description must explain the change in enough detail for review:
 
-- `Change`: the exact file-level change being made.
+- `Files`: every file changed by the child and why each belongs in the same scope.
 - `Behavior`: what the change does for the application or test suite.
 - `Issue`: the issue acceptance criterion or scope item it implements.
 - `Decisions`: the relevant decision IDs from `decisions.md`, or `None`.
@@ -50,22 +51,21 @@ The description can be a multi-line Jujutsu description when useful. The change 
 
 ## Test-Driven Slice Workflow
 
-Every vertical slice follows a red-green-refactor sequence:
+Every vertical slice follows a test-first, green-child sequence:
 
 1. Translate the approved issue acceptance criteria into a small end-to-end test suite.
-2. Create the test child edit before any implementation child edit for that behavior.
-3. Run the tests and confirm they fail because the behavior is not implemented, not because the test harness is broken.
-4. Add focused unit tests for pure domain, validation, parsing, search, scaling, or transformation logic when that logic benefits from isolated coverage.
-5. Add focused integration tests for database, migration, repository, HTTP, or other boundary behavior when unit or end-to-end tests alone would not provide useful diagnosis.
-6. Implement the smallest behavior that makes the tests pass.
-7. Run the relevant focused tests, then the complete test suite for the repository.
-8. Refactor only while the tests remain green and the change stays within the approved issue.
+2. Define focused unit or integration tests for logic and boundaries when they provide useful diagnosis.
+3. Decide whether the tests can pass against existing behavior. If not, include the tests and the smallest required implementation in the same coherent child edit.
+4. Construct the child test-first and use a temporary red state if useful, but do not leave the child as a failing, uncompilable, or unfinished result.
+5. Run the relevant focused tests, formatting checks, and compilation checks before completing the child.
+6. Run the complete repository check suite before moving to the next child when the repository supports it.
+7. Refactor only while the tests remain green and the change stays within the approved issue.
 
 End-to-end tests are the primary acceptance signal for each vertical slice. They should exercise the user-visible flow through the application's real HTTP boundary and an isolated test data store or equivalent test environment. Use the simplest reliable test harness; do not build a speculative testing framework.
 
 Unit and integration tests complement, rather than replace, end-to-end coverage. Do not duplicate every assertion at every level. Put user outcomes in end-to-end tests, detailed edge cases in unit tests, and wiring or persistence behavior in integration tests.
 
-Test child edits are subject to the same one-file and review rules as implementation edits. If a test helper or fixture needs its own file, create another child edit for that file. Never hide implementation changes inside a test child edit.
+Tests may be separate child edits when they pass against existing behavior. When new tests require new implementation, include the test and implementation files in the same child edit. Never include unrelated implementation in a test child merely to avoid a separate scope decision.
 
 If a required test cannot be written or fails for a reason unrelated to the approved behavior, stop and ask the user rather than weakening the test or proceeding without coverage.
 
@@ -95,26 +95,30 @@ The root remains the issue's stable anchor throughout implementation. All code, 
 
 Before each child edit, describe:
 
-- The single file to change.
+- Every file to change and why the files belong together.
 - The smallest coherent behavior being added or changed.
 - What the user will observe or what the test will prove.
 - The exact issue acceptance criteria covered.
 - The relevant decision IDs.
 - The validation to run.
 
-Do not bundle source code and tests into one child edit. Create separate child edits when both files need changes.
+Bundle source code and tests into one child edit when that is necessary to leave the child compiling and passing. Keep the child limited to the smallest complete behavior.
 
 ### 4. Make and Verify the Child Edit
 
 Create a new child edit on top of the current edit, then make the file change. Use `apply_patch` for manual edits. After editing:
 
-1. Check `jj status` and confirm exactly one file changed in the child.
+1. Check `jj status` and confirm only the described files changed in the child.
 2. Inspect `jj diff` for scope, correctness, and accidental edits.
-3. Run the narrowest relevant test, build, formatter, or static check.
-4. Run broader verification when the issue requires it.
-5. Report the file, detailed change, issue linkage, decisions, validation, and any residual risk.
+3. Run formatting checks for changed source files.
+4. Run the narrowest relevant tests and compilation checks.
+5. Run broader verification when the issue requires it, including `make check` when available.
+6. Confirm that no unfinished or unrunnable functionality remains in the child.
+7. Report every changed file, detailed change, issue linkage, decisions, validation, and any residual risk.
 
-If a command changes more than the intended file, stop and cleanly separate the work into child edits rather than accepting a multi-file child.
+If a command changes more files than intended, stop and determine whether those files are required for the same complete behavior. Include them only when they are coherent and described; otherwise separate the work into child edits.
+
+Do not create the next child until the current code child compiles and its relevant tests pass. Documentation-only children must still be complete and internally consistent.
 
 ### 5. Continue Within The Issue
 
@@ -124,6 +128,7 @@ After every child edit:
 - Leave the child edit available for the user to inspect and discuss.
 - Continue to the next planned child edit within the same issue without waiting for explicit approval.
 - Pause if the user asks to stop, requests a change, identifies a conflict, or the implementation exposes an unresolved requirement.
+- A review report is not a green-status exception: resolve compilation or test failures before continuing.
 
 The user may review and discuss each child edit independently. Discussion does not authorize changing the issue root or moving to another issue.
 
@@ -153,7 +158,8 @@ If any condition is missing, remain on the current issue and ask the user what t
 - Prefer the existing project structure and patterns.
 - Keep server-rendered HTML and HTMX behavior aligned with the approved stories.
 - Start each slice with end-to-end tests and add unit or integration tests where they provide focused coverage.
-- Keep tests as separate one-file child edits from implementation changes.
+- Keep tests in separate children when they pass independently; otherwise include them with the required implementation in one coherent child.
+- Never leave a child with unfinished, uncompilable, failing, or unrunnable code.
 - Treat generated files as ordinary files for scope and review; generated changes must still be isolated to one child edit.
 - Do not add compatibility layers, abstractions, or future features without an approved issue or explicit user approval.
 

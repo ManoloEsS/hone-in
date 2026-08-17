@@ -11,6 +11,10 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/ManoloEsS/hone-in/internal/database"
+	"github.com/ManoloEsS/hone-in/internal/recipe"
+	"github.com/ManoloEsS/hone-in/internal/web"
 )
 
 const (
@@ -27,15 +31,16 @@ func newHandler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(response http.ResponseWriter, _ *http.Request) {
 		response.WriteHeader(http.StatusOK)
+		response.Write([]byte("healthcheck"))
 	})
 
 	return mux
 }
 
-func newServer(address string) *http.Server {
+func newServer(address string, handler http.Handler) *http.Server {
 	return &http.Server{
 		Addr:              address,
-		Handler:           newHandler(),
+		Handler:           handler,
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,
@@ -51,21 +56,37 @@ func serverAddress(configured string) string {
 	return configured
 }
 
-func runWithContext(ctx context.Context, address string, listen func(string, string) (net.Listener, error)) error {
+func runWithContext(ctx context.Context, address string, handler http.Handler, listen func(string, string) (net.Listener, error)) error {
 	address = serverAddress(address)
 	listener, err := listen("tcp", address)
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", address, err)
 	}
 
-	return serve(ctx, newServer(address), listener, shutdownTimeout)
+	return serve(ctx, newServer(address, handler), listener, shutdownTimeout)
 }
 
 func run() error {
+	databasePath := os.Getenv("DB_PATH")
+	if databasePath == "" {
+		return errors.New("DB_PATH is required")
+	}
+
+	db, err := database.Open(databasePath)
+	if err != nil {
+		return fmt.Errorf("open application database: %w", err)
+	}
+	defer db.Close()
+
+	handler, err := web.NewHandler(recipe.NewRepository(db))
+	if err != nil {
+		return fmt.Errorf("create application handler: %w", err)
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	return runWithContext(ctx, os.Getenv("HTTP_ADDR"), net.Listen)
+	return runWithContext(ctx, os.Getenv("HTTP_ADDR"), handler, net.Listen)
 }
 
 func main() {

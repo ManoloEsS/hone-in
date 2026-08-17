@@ -1,9 +1,14 @@
 GO ?= go
 GOFMT ?= gofmt
+DB_PATH ?= ./hone-in.db
+HTTP_ADDR ?= :8080
 
-.PHONY: check fmt-check test vet
+.PHONY: check fmt-check run test vet
 
 check: fmt-check vet test
+
+run:
+	DB_PATH="$(DB_PATH)" HTTP_ADDR="$(HTTP_ADDR)" $(GO) run ./cmd/server
 
 fmt-check:
 	@files="$$(find . -type f -name '*.go' -not -path './.jj/*')"; \
