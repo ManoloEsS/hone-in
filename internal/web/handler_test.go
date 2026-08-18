@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -32,6 +33,86 @@ func TestCatalogShowsEmptyState(t *testing.T) {
 	}
 	if !strings.Contains(body, "/static/css/catalog.css") {
 		t.Fatalf("expected catalog stylesheet link in response, got %q", body)
+	}
+	if !strings.Contains(body, "New recipe") {
+		t.Fatalf("expected new-recipe action in response, got %q", body)
+	}
+}
+
+func TestNewRecipeForm(t *testing.T) {
+	server, db := newTestServer(t)
+	defer server.Close()
+	defer db.Close()
+
+	response, err := server.Client().Get(server.URL + "/recipes/new")
+	if err != nil {
+		t.Fatalf("get new recipe form: %v", err)
+	}
+	body := readResponseBody(t, response)
+
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("expected new recipe form status %d, got %d", http.StatusOK, response.StatusCode)
+	}
+	if !strings.Contains(body, "<form method=\"post\" action=\"/recipes\">") {
+		t.Fatalf("expected recipe form in response, got %q", body)
+	}
+}
+
+func TestCreateRecipeRedirectsAndPersistsTrimmedName(t *testing.T) {
+	server, db := newTestServer(t)
+	defer server.Close()
+	defer db.Close()
+
+	client := *server.Client()
+	client.CheckRedirect = func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	response, err := client.PostForm(server.URL+"/recipes", url.Values{"name": {"  Apple Pie  "}})
+	if err != nil {
+		t.Fatalf("submit new recipe: %v", err)
+	}
+	response.Body.Close()
+
+	if response.StatusCode != http.StatusSeeOther {
+		t.Fatalf("expected recipe creation status %d, got %d", http.StatusSeeOther, response.StatusCode)
+	}
+	if location := response.Header.Get("Location"); location != "/recipes" {
+		t.Fatalf("expected creation redirect to /recipes, got %q", location)
+	}
+
+	var name string
+	if err := db.QueryRow("SELECT name FROM recipes").Scan(&name); err != nil {
+		t.Fatalf("read created recipe: %v", err)
+	}
+	if name != "Apple Pie" {
+		t.Fatalf("expected trimmed stored name %q, got %q", "Apple Pie", name)
+	}
+}
+
+func TestCreateRecipeRejectsBlankName(t *testing.T) {
+	server, db := newTestServer(t)
+	defer server.Close()
+	defer db.Close()
+
+	response, err := server.Client().PostForm(server.URL+"/recipes", url.Values{"name": {" \t "}})
+	if err != nil {
+		t.Fatalf("submit blank recipe: %v", err)
+	}
+	body := readResponseBody(t, response)
+
+	if response.StatusCode != http.StatusUnprocessableEntity {
+		t.Fatalf("expected blank recipe status %d, got %d", http.StatusUnprocessableEntity, response.StatusCode)
+	}
+	if !strings.Contains(body, "Recipe name is required.") {
+		t.Fatalf("expected validation error in response, got %q", body)
+	}
+
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM recipes").Scan(&count); err != nil {
+		t.Fatalf("count recipes: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected blank recipe to create no records, got %d", count)
 	}
 }
 

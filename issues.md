@@ -213,7 +213,7 @@ Ingredient and preparation-step tables are intentionally deferred to the create-
 - Type: Vertical slice
 - Related user story: `US-003`
 - Prerequisite: `ISSUE-001`
-- Status: Approved
+- Status: Complete
 - GitHub status: Not added
 
 ### Goal

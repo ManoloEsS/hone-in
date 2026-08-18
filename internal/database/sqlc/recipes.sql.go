@@ -9,6 +9,30 @@ import (
 	"context"
 )
 
+const createRecipe = `-- name: CreateRecipe :one
+INSERT INTO recipes (name, created_at, updated_at)
+VALUES (?, ?, ?)
+RETURNING id, name, created_at, updated_at
+`
+
+type CreateRecipeParams struct {
+	Name      string `json:"name"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+func (q *Queries) CreateRecipe(ctx context.Context, arg CreateRecipeParams) (Recipe, error) {
+	row := q.db.QueryRowContext(ctx, createRecipe, arg.Name, arg.CreatedAt, arg.UpdatedAt)
+	var i Recipe
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listRecipes = `-- name: ListRecipes :many
 SELECT id, name, created_at, updated_at
 FROM recipes

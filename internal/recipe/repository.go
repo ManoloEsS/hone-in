@@ -3,6 +3,7 @@ package recipe
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	dbgen "github.com/ManoloEsS/hone-in/internal/database/sqlc"
 )
@@ -30,13 +31,31 @@ func (repository *Repository) ListRecipes(ctx context.Context) ([]Recipe, error)
 
 	recipes := make([]Recipe, len(rows))
 	for index, row := range rows {
-		recipes[index] = Recipe{
-			ID:        row.ID,
-			Name:      row.Name,
-			CreatedAt: row.CreatedAt,
-			UpdatedAt: row.UpdatedAt,
-		}
+		recipes[index] = recipeFromRow(row)
 	}
 
 	return recipes, nil
+}
+
+func (repository *Repository) CreateRecipe(ctx context.Context, name string, now time.Time) (Recipe, error) {
+	timestamp := now.UTC().Format(time.RFC3339Nano)
+	row, err := repository.queries.CreateRecipe(ctx, dbgen.CreateRecipeParams{
+		Name:      name,
+		CreatedAt: timestamp,
+		UpdatedAt: timestamp,
+	})
+	if err != nil {
+		return Recipe{}, err
+	}
+
+	return recipeFromRow(row), nil
+}
+
+func recipeFromRow(row dbgen.Recipe) Recipe {
+	return Recipe{
+		ID:        row.ID,
+		Name:      row.Name,
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
 }
