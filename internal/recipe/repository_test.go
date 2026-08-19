@@ -2,6 +2,8 @@ package recipe
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"path/filepath"
 	"testing"
 	"time"
@@ -66,5 +68,36 @@ func TestRepositoryCreatesRecipe(t *testing.T) {
 	}
 	if len(recipes) != 1 || recipes[0] != created {
 		t.Fatalf("expected persisted recipe %#v, got %#v", created, recipes)
+	}
+}
+
+func TestRepositoryGetsRecipeByID(t *testing.T) {
+	db, err := database.Open(filepath.Join(t.TempDir(), "recipes.db"))
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	repository := NewRepository(db)
+	created, err := repository.CreateRecipe(context.Background(), "Apple Pie", time.Date(2026, time.August, 18, 20, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("create recipe: %v", err)
+	}
+
+	got, err := repository.GetRecipe(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("get recipe: %v", err)
+	}
+	if got != created {
+		t.Fatalf("expected recipe %#v, got %#v", created, got)
+	}
+}
+
+func TestRepositoryReturnsNoRowsForMissingRecipe(t *testing.T) {
+	repository := newTestRepository(t)
+
+	_, err := repository.GetRecipe(context.Background(), 1)
+	if !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("expected missing recipe error %v, got %v", sql.ErrNoRows, err)
 	}
 }

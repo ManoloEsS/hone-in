@@ -267,7 +267,7 @@ Allow a chef to create a recipe record with a name and see it in the catalog.
 - Type: Vertical slice
 - Related user story: `US-004`
 - Prerequisite: `ISSUE-002`
-- Status: Approved
+- Status: Complete
 - GitHub status: Not added
 
 ### Goal

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -159,11 +160,17 @@ func TestCatalogShowsStoredRecipes(t *testing.T) {
 	defer server.Close()
 	defer db.Close()
 
+	recipeIDs := make(map[string]int64)
 	for _, name := range []string{"Zucchini Soup", "Apple Pie"} {
-		_, err := db.Exec("INSERT INTO recipes (name, created_at, updated_at) VALUES (?, ?, ?)", name, "2026-08-16T00:00:00Z", "2026-08-16T00:00:00Z")
+		result, err := db.Exec("INSERT INTO recipes (name, created_at, updated_at) VALUES (?, ?, ?)", name, "2026-08-16T00:00:00Z", "2026-08-16T00:00:00Z")
 		if err != nil {
 			t.Fatalf("insert recipe %q: %v", name, err)
 		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			t.Fatalf("read recipe ID %q: %v", name, err)
+		}
+		recipeIDs[name] = id
 	}
 
 	response, err := server.Client().Get(server.URL + "/recipes")
@@ -179,6 +186,62 @@ func TestCatalogShowsStoredRecipes(t *testing.T) {
 		if !strings.Contains(body, name) {
 			t.Fatalf("expected %q in response, got %q", name, body)
 		}
+		link := `href="/recipes/` + strconv.FormatInt(recipeIDs[name], 10) + `"`
+		if !strings.Contains(body, link) {
+			t.Fatalf("expected recipe link %q in response, got %q", link, body)
+		}
+	}
+}
+
+func TestRecipeDetailShowsStoredRecipe(t *testing.T) {
+	server, db := newTestServer(t)
+	defer server.Close()
+	defer db.Close()
+
+	result, err := db.Exec("INSERT INTO recipes (name, created_at, updated_at) VALUES (?, ?, ?)", "Apple Pie", "2026-08-16T00:00:00Z", "2026-08-16T00:00:00Z")
+	if err != nil {
+		t.Fatalf("insert recipe: %v", err)
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		t.Fatalf("read recipe ID: %v", err)
+	}
+
+	response, err := server.Client().Get(server.URL + "/recipes/" + strconv.FormatInt(id, 10))
+	if err != nil {
+		t.Fatalf("get recipe detail: %v", err)
+	}
+	body := readResponseBody(t, response)
+
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("expected recipe detail status %d, got %d", http.StatusOK, response.StatusCode)
+	}
+	if !strings.Contains(body, "<h1>Apple Pie</h1>") {
+		t.Fatalf("expected recipe name in response, got %q", body)
+	}
+
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM recipes").Scan(&count); err != nil {
+		t.Fatalf("count recipes after detail request: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected detail request to preserve recipe count, got %d", count)
+	}
+}
+
+func TestRecipeDetailReturnsNotFoundForMissingRecipe(t *testing.T) {
+	server, db := newTestServer(t)
+	defer server.Close()
+	defer db.Close()
+
+	response, err := server.Client().Get(server.URL + "/recipes/999")
+	if err != nil {
+		t.Fatalf("get missing recipe detail: %v", err)
+	}
+	response.Body.Close()
+
+	if response.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected missing recipe status %d, got %d", http.StatusNotFound, response.StatusCode)
 	}
 }
 

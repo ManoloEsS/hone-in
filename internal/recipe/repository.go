@@ -51,6 +51,15 @@ func (repository *Repository) CreateRecipe(ctx context.Context, name string, now
 	return recipeFromRow(row), nil
 }
 
+func (repository *Repository) GetRecipe(ctx context.Context, id int64) (Recipe, error) {
+	row, err := repository.queries.GetRecipe(ctx, id)
+	if err != nil {
+		return Recipe{}, err
+	}
+
+	return recipeFromRow(row), nil
+}
+
 func recipeFromRow(row dbgen.Recipe) Recipe {
 	return Recipe{
 		ID:        row.ID,
