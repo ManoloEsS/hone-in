@@ -164,9 +164,9 @@ This document records product and architecture decisions for Hone In. Decisions 
 
 - Status: Accepted
 - Date: 2026-08-16
-- Decision: Develop each vertical slice test-first. Begin with a small end-to-end test suite that expresses the user-visible behavior, then implement the slice against those tests. Add unit tests for isolated domain or transformation logic and integration tests for database, repository, HTTP, or other boundary behavior when they provide focused coverage.
+- Decision: Develop each vertical slice test-first. Define a small end-to-end test suite that expresses the user-visible behavior before implementation, then implement the slice against those tests. Add unit tests for isolated domain or transformation logic and integration tests for database, repository, HTTP, or other boundary behavior when they provide focused coverage. Tests may be delivered in the same child edit as their implementation when a separate test edit would not remain runnable.
 - Rationale: End-to-end tests keep each slice aligned with its user outcome, while unit and integration tests provide fast, precise feedback for logic and system boundaries.
-- Consequences: Test changes are created before implementation changes for each slice. A slice is not complete until its end-to-end behavior and relevant lower-level tests pass. Tests remain isolated, deterministic, and limited to the behavior in the approved issue rather than becoming a speculative test framework.
+- Consequences: Tests are designed before implementation. A test-only child edit is allowed when it passes against existing behavior; otherwise tests and implementation belong in the same coherent child edit. A slice is not complete until its end-to-end behavior and relevant lower-level tests pass. Tests remain isolated, deterministic, and limited to the behavior in the approved issue rather than becoming a speculative test framework.
 
 ## D-021: Expand CI With Project Capabilities
 
@@ -175,3 +175,11 @@ This document records product and architecture decisions for Hone In. Decisions 
 - Decision: Keep the initial pull-request CI pipeline intentionally small and expand it as the repository gains application code, features, test levels, dependencies, runtime services, and quality requirements.
 - Rationale: A minimal pipeline is appropriate for the empty initial repository, while evolving CI with the application keeps checks relevant without adding speculative infrastructure.
 - Consequences: New capabilities should add or update the corresponding Makefile targets and CI steps in the same local/CI contract. Future database, integration, end-to-end, race, coverage, linting, or build checks should be introduced when their related implementation exists and should remain runnable locally where practical.
+
+## D-022: Require Runnable Child Edits
+
+- Status: Accepted
+- Date: 2026-08-16
+- Decision: Every completed child edit must be a complete, compilable, and runnable increment for its scope. A child defaults to one file, but may include multiple files when they are required together for one coherent behavior, such as implementation and its tests.
+- Rationale: Child edits are the units reviewed by the user and should never leave unfinished functionality, missing symbols, failing tests, or an unrunnable project state for the next edit.
+- Consequences: Child descriptions must list every changed file and explain why they belong together. Relevant tests must pass before the next child edit is created. A test-only child is valid only when it passes against existing behavior; otherwise the test and implementation must be completed in the same child. Temporary red states may be used while constructing a child but must not be left as its completed result.

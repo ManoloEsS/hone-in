@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>New recipe</title>
+    <link rel="stylesheet" href="/static/css/catalog.css">
+</head>
+<body>
+    <main>
+        <h1>New recipe</h1>
+        {{if .Error}}
+        <p role="alert">{{.Error}}</p>
+        {{end}}
+        <form method="post" action="/recipes">
+            <p>
+                <label for="name">Recipe name</label>
+                <input id="name" name="name" value="{{.Name}}" required>
+            </p>
+            <button type="submit">Create recipe</button>
+        </form>
+        <p><a href="/recipes">Back to recipes</a></p>
+    </main>
+</body>
+</html>

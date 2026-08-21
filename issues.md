@@ -145,7 +145,7 @@ Establish one simple local command for project checks and run that same command 
 - Type: Vertical slice
 - Related user story: `US-001`
 - Prerequisite: `ISSUE-000`
-- Status: Approved
+- Status: Complete
 - GitHub status: Not added
 
 ### Goal
@@ -213,7 +213,7 @@ Ingredient and preparation-step tables are intentionally deferred to the create-
 - Type: Vertical slice
 - Related user story: `US-003`
 - Prerequisite: `ISSUE-001`
-- Status: Approved
+- Status: Complete
 - GitHub status: Not added
 
 ### Goal
@@ -267,7 +267,7 @@ Allow a chef to create a recipe record with a name and see it in the catalog.
 - Type: Vertical slice
 - Related user story: `US-004`
 - Prerequisite: `ISSUE-002`
-- Status: Approved
+- Status: Complete
 - GitHub status: Not added
 
 ### Goal
